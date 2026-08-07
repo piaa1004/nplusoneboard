@@ -1,0 +1,51 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: nplusone-board-demo
+
+  datasource:
+    # createDatabaseIfNotExist=true → nplusone_board 스키마가 없으면 드라이버가 만들어 준다(별도 setup.sql 불필요)
+    url: jdbc:mysql://localhost:3306/nplusone_board?createDatabaseIfNotExist=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: root
+    password: 1234
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      # 데모용: 부팅 시 스키마를 새로 만들고 종료 시 삭제
+      ddl-auto: create-drop
+    # data.sql(SQL 시드)이 Hibernate 스키마 생성 이후에 실행되도록 지연시킴
+    defer-datasource-initialization: true
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        highlight_sql: true
+        # ⚠️ 여기에 default_batch_fetch_size 를 켜면 "naive" 전략에서도 N+1 이 사라져
+        #    데모가 성립하지 않습니다. 그래서 전역 설정 대신 Post.batchComments 에
+        #    @BatchSize 를 붙여 "설정 없음 vs 배치 적용" 을 한 앱 안에서 비교합니다.
+        #    (실무에서는 아래 한 줄을 켜는 것이 가장 간단한 N+1 대응입니다.)
+        # default_batch_fetch_size: 100
+    open-in-view: false   # 컨트롤러에서 지연 로딩 금지 → 서비스 트랜잭션 안에서 DTO 매핑
+
+  # src/main/resources/data.sql 을 매 부팅 시 실행 (테스트 데이터 시드)
+  sql:
+    init:
+      mode: always
+      encoding: UTF-8
+
+  data:
+    web:
+      pageable:
+        default-page-size: 10
+        max-page-size: 100        # ?size=99999 방어
+        one-indexed-parameters: false
+
+logging:
+  level:
+    org.hibernate.SQL: debug
+    org.hibernate.orm.jdbc.bind: trace
+    # 컬렉션 fetch join + 페이징 시 뜨는 "applying in memory" 경고를 놓치지 않도록
+    org.hibernate.orm.query: warn
